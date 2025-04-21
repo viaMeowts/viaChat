@@ -32,7 +32,7 @@ A simple server-side Fabric mod for Minecraft 1.21.4 that adds local and global 
 ## Installation
 
 1.  Ensure you have a Fabric server setup for Minecraft 1.21.4.
-2.  Download the latest `viaChat-*.jar` file from the [Releases](https://github.com/YourUsername/YourRepo/releases) page (Replace with your actual link).
+2.  Download the latest `viaChat-*.jar` file from the [Releases](https://github.com/viaMeowts/viaChat/releases)
 3.  Place the downloaded `.jar` file into your server's `mods` folder.
 4.  Ensure you have [Fabric API](https://modrinth.com/mod/fabric-api) installed in your server's `mods` folder (required dependency).
 5.  Restart your server.
