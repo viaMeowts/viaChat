@@ -9,10 +9,9 @@ import java.util.Map;
 
 public class Lang {
 
-    private static String currentLang = "en";
-
     private static final Map<String, Text> enMessages = new HashMap<>();
     private static final Map<String, Text> ruMessages = new HashMap<>();
+    private static String currentLang = "en";
 
     public static void initialize() {
         enMessages.put("command.error.player_only", Text.literal("This command can only be run by a player.").formatted(Formatting.RED));
@@ -29,6 +28,7 @@ public class Lang {
         enMessages.put("command.lang.set", Text.literal("Language set to: ").formatted(Formatting.GRAY));
         enMessages.put("command.lang.invalid", Text.literal("Invalid language. Use 'en' or 'ru'.").formatted(Formatting.RED));
         enMessages.put("command.lang.current", Text.literal("Current language: ").formatted(Formatting.GRAY));
+        enMessages.put("chat.no_one_heard", Text.literal("No one can hear you.").formatted(Formatting.YELLOW));
 
         ruMessages.put("command.error.player_only", Text.literal("Эту команду может использовать только игрок.").formatted(Formatting.RED));
         ruMessages.put("command.set.prefix_local", Text.literal("Режим чата изменен: ").formatted(Formatting.GRAY)
@@ -44,6 +44,7 @@ public class Lang {
         ruMessages.put("command.lang.set", Text.literal("Язык изменен на: ").formatted(Formatting.GRAY));
         ruMessages.put("command.lang.invalid", Text.literal("Неверный язык. Используйте 'en' или 'ru'.").formatted(Formatting.RED));
         ruMessages.put("command.lang.current", Text.literal("Текущий язык: ").formatted(Formatting.GRAY));
+        enMessages.put("chat.no_one_heard", Text.literal("Вас никто не слышит.").formatted(Formatting.YELLOW));
     }
 
     public static Text get(String key) {

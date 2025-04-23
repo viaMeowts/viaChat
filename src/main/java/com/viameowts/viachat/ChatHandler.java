@@ -4,23 +4,21 @@ import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.minecraft.network.message.SignedMessage;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ChatHandler {
 
     public static void register() {
         ServerMessageEvents.ALLOW_CHAT_MESSAGE.register((message, sender, params) -> {
-            onChatMessage(message, sender, params);
+            onChatMessage(message, sender);
             return false;
         });
     }
 
-    private static void onChatMessage(SignedMessage message, ServerPlayerEntity sender, net.minecraft.network.message.MessageType.Parameters params) {
+    private static void onChatMessage(SignedMessage message, ServerPlayerEntity sender) {
         String rawMessage = message.getContent().getString();
         MinecraftServer server = sender.getServer();
         if (server == null) return;
@@ -41,52 +39,45 @@ public class ChatHandler {
 
         if (messageContent.isEmpty()) return;
 
-        if (isEffectivelyGlobal) {
-            handleGlobalMessage(server, sender, messageContent);
-        } else {
-            handleLocalMessage(server, sender, messageContent);
-        }
+        Double squareDistance = isEffectivelyGlobal ? null : viaChat.LOCAL_CHAT_RADIUS_SQUARED;
+
+        handleMessage(server, sender, messageContent, squareDistance);
 
         viaChat.LOGGER.info("<{}> {}", sender.getName().getString(), rawMessage);
     }
 
-    private static void handleGlobalMessage(MinecraftServer server, ServerPlayerEntity sender, String messageContent) {
-        Formatting prefixColor = Formatting.YELLOW;
-        Formatting nameColor = Formatting.YELLOW;
-        Formatting msgColor = Formatting.WHITE;
-        String prefix = "[G]";
+    private static void handleMessage(
+            MinecraftServer server,
+            ServerPlayerEntity sender,
+            String messageContent,
+            @Nullable Double squareDistance) {
+        boolean isGlobal = squareDistance == null;
+        MessageFormatting formatting = isGlobal ? viaChat.GLOBAL_FORMATTING : viaChat.LOCAL_FORMATTING;
+        Text message = formatting.format(isGlobal ? "[G]" : "[L]", sender.getDisplayName().copy(), messageContent);
 
-        MutableText formattedMessage = Text.literal(prefix + " ").formatted(prefixColor)
-                .append(sender.getDisplayName().copy().formatted(nameColor))
-                .append(Text.literal(": ").formatted(prefixColor))
-                .append(Text.literal(messageContent).formatted(msgColor));
+        if (isGlobal) {
+            server.getPlayerManager().broadcast(message, false);
+        } else {
+            var players = sender.getWorld().getPlayers();
+            var originPosition = sender.getPos();
 
-        server.getPlayerManager().broadcast(formattedMessage, false);
-    }
+            AtomicBoolean foundPlayers = new AtomicBoolean(false);
 
-    private static void handleLocalMessage(MinecraftServer server, ServerPlayerEntity sender, String messageContent) {
-        Formatting prefixColor = Formatting.GREEN;
-        Formatting nameColor = Formatting.GREEN;
-        Formatting msgColor = Formatting.GRAY;
-        String prefix = "[L]";
-        double radiusSquared = viaChat.LOCAL_CHAT_RADIUS_SQUARED;
+            sender.sendMessage(message);
+            players.stream()
+                    .filter(player -> player.squaredDistanceTo(originPosition) <= squareDistance)
+                    .filter(player -> player != sender)
+                    .forEach(player -> {
+                        player.sendMessage(message, false);
 
-        MutableText formattedMessage = Text.literal(prefix + " ").formatted(prefixColor)
-                .append(sender.getDisplayName().copy().formatted(nameColor))
-                .append(Text.literal(": ").formatted(prefixColor))
-                .append(Text.literal(messageContent).formatted(msgColor));
+                        // Ignore sneaking players
+                        if (!player.isSneaking()) {
+                            foundPlayers.set(true);
+                        }
+                    });
 
-        List<ServerPlayerEntity> players = server.getPlayerManager().getPlayerList();
-        World senderWorld = sender.getWorld();
-
-        for (ServerPlayerEntity recipient : players) {
-            if (recipient == sender) {
-                 recipient.sendMessage(formattedMessage, false);
-                 continue;
-            }
-            if (recipient.getWorld() == senderWorld &&
-                sender.squaredDistanceTo(recipient) <= radiusSquared) {
-                recipient.sendMessage(formattedMessage, false);
+            if (!foundPlayers.get()) {
+                sender.sendMessage(Lang.get("chat.no_one_heard"));
             }
         }
     }
